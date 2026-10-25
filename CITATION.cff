@@ -36,7 +36,7 @@ keywords:
 # --- the paper: fill in the arXiv identifier (and later the journal DOI) when available ---
 preferred-citation:
   type: article
-  title: "Veta and Pola: two GPU-resident high-performance DNS solvers developed entirely by AI agents"
+  title: "Veta and Pola: two GPU-resident high-performance DNS solvers written entirely by AI agents"
   authors:
     - family-names: Toosi
       given-names: Siavash
