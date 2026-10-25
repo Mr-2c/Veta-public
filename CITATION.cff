@@ -1,0 +1,53 @@
+# Citation metadata (Citation File Format 1.2.0, https://citation-file-format.github.io/)
+# GitHub renders this file as a "Cite this repository" button.
+cff-version: 1.2.0
+message: >-
+  If you use Veta, please cite the accompanying paper (preferred-citation below)
+  and, if you need to refer to a specific code version, this repository.
+type: software
+title: "Veta: a GPU-resident direct numerical simulation solver for turbulent channel flow"
+abstract: >-
+  Direct numerical simulation of incompressible turbulent plane channel flow in
+  CUDA Fortran: Fourier discretization in the two wall-parallel directions,
+  Chebyshev (Shen-Galerkin) or banded finite differences in the wall-normal
+  direction, the Kim-Moin-Moser velocity/wall-normal-vorticity formulation,
+  a low-storage third-order Runge-Kutta/Crank-Nicolson time integrator, and a
+  1-D slab decomposition with NCCL all-to-all transposes for multi-GPU runs.
+authors:
+  - family-names: Toosi
+    given-names: Siavash
+    email: siavash.toosi@fau.de
+    affiliation: "Institute of Fluid Mechanics (LSTM), Friedrich-Alexander-Universität Erlangen-Nürnberg (FAU), Germany"
+  - family-names: Schlatter
+    given-names: Philipp
+    email: philipp.schlatter@fau.de
+    affiliation: "Institute of Fluid Mechanics (LSTM), Friedrich-Alexander-Universität Erlangen-Nürnberg (FAU), Germany"
+license: MIT
+repository-code: "https://github.com/Mr-2c/Veta-public"
+version: "1.0.0"
+date-released: "2026-09-13"
+keywords:
+  - direct numerical simulation
+  - turbulent channel flow
+  - GPU computing
+  - CUDA Fortran
+  - spectral methods
+  - AI-assisted software development
+# --- the paper: fill in the arXiv identifier (and later the journal DOI) when available ---
+preferred-citation:
+  type: article
+  title: "Veta and Pola: two GPU-resident high-performance DNS solvers developed entirely by AI agents"
+  authors:
+    - family-names: Toosi
+      given-names: Siavash
+    - family-names: Schlatter
+      given-names: Philipp
+  year: 2026
+  journal: "arXiv preprint"
+  # identifiers:
+  #   - type: other
+  #     value: "arXiv:2609.XXXXX"
+  #     description: "arXiv identifier"
+  #   - type: doi
+  #     value: "10.48550/arXiv.2609.XXXXX"
+  notes: "Preprint; replace with the journal reference once published."

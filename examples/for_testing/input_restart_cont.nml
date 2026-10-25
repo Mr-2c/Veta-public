@@ -1,0 +1,51 @@
+! input_restart_cont.nml -- restart test, part 2 of 2 (the RESTART).
+!
+! Restarts from the step-50 checkpoint written by input_restart_full.nml and runs
+! 50 more steps -> reaches step 100. It writes its OWN step-100 checkpoint (under a
+! distinct base, chk_cont.bin) so you can compare it byte-for-byte against the
+! baseline's step-100 checkpoint -- the STRONGEST check (full state, every mode):
+!     A=$(ls -t chk_rst_dp_step00000100_t*.bin  | head -1)   # baseline step 100
+!     B=$(ls -t chk_cont_dp_step00000100_t*.bin | head -1)   # restart  step 100
+!     cmp "$A" "$B" && echo "BYTE-IDENTICAL"                 # empty cmp = pass
+! (The step-100 LOG line matching is the weaker, quicker check.)
+!
+! BEFORE running: point restart_file at the step-50 checkpoint the baseline wrote
+! (the time tag in the name depends on dt, so glob it):
+!     CKPT=$(ls chk_rst_dp_step00000050_t*.bin | head -1)
+!     sed -i "s|restart_file *=.*|restart_file = '$CKPT'|" examples/for_testing/input_restart_cont.nml
+! (Cross-P bonus: launch this at --ntasks=2 while the baseline ran at --ntasks=4 --
+!  it should STILL be byte-identical -- the trajectory has no order-dependent
+!  cross-rank reductions, so cross-P restart reproduces the exact bytes.)
+&run
+  n          = 64
+  nx         = 64
+  nz         = 64
+  Lx         = 12.566370614359172   ! 4*pi
+  Lz         = 4.188790204786391    ! 4*pi/3
+  Re         = 2800.0
+  Qtar       = 1.0
+  dt         = 5.0e-3               ! must match the baseline
+  n_steps    = 50                   ! resume at step 50 -> run to step 100
+  log_every  = 10
+  chk_every  = 50                   ! write a step-100 checkpoint (distinct name) to
+                                    ! cmp byte-for-byte vs the baseline's step-100 one
+  do_restart = .true.
+  restart_file = 'SET_ME_TO_THE_STEP50_CHECKPOINT'   ! set by the sed line above
+  chk_file     = 'chk_cont.bin'     ! distinct base -> chk_cont_dp_step00000100_t....bin
+  variable_dt      = .false.
+  cfl_target       = 0.32
+  dt_max           = 1.0e-2
+  dt_min           = 1.0e-3
+  dt_recompute_tol = 1.5e-1
+  turbulent   = .true.
+  eps         = 0.10
+  pseed       = 12345
+  kcut        = 8
+  stats_every = 0
+  stats_start = 0
+  stats_file  = 'unused_stats.dat'
+  div_every   = 0
+  time_every  = 0
+  nan_every   = 20
+  validate_steps = 200
+/

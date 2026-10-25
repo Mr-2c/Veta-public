@@ -1,0 +1,42 @@
+! input_restart_full.nml -- restart test, part 1 of 2 (the BASELINE).
+!
+! Small/fast 64^3 turbulent box. Runs 100 steps fresh and checkpoints at step 50
+! and 100 (rolling last-2 keeps both). The step-100 log line is the REFERENCE that
+! part 2 (input_restart_cont.nml, a restart from the step-50 checkpoint) must
+! reproduce bit-for-bit -- the test of the checkpoint/restart wiring.
+!
+! Deterministic: fixed seed + fixed dt, so two runs of this deck are identical, and
+! a restart from the step-50 checkpoint reproduces steps 51..100 exactly (SMR is
+! self-starting -> the history registers are re-derived, not restored).
+&run
+  n          = 64
+  nx         = 64
+  nz         = 64
+  Lx         = 12.566370614359172   ! 4*pi
+  Lz         = 4.188790204786391    ! 4*pi/3
+  Re         = 2800.0
+  Qtar       = 1.0
+  dt         = 5.0e-3               ! FIXED
+  n_steps    = 100
+  log_every  = 10                   ! logs at step 10,20,...,100
+  chk_every  = 50                   ! checkpoints at step 50 and 100
+  do_restart = .false.
+  restart_file = 'unused.bin'
+  chk_file     = 'chk_rst.bin'      ! -> chk_rst_dp_step00000050_t....bin etc.
+  variable_dt      = .false.
+  cfl_target       = 0.32
+  dt_max           = 1.0e-2
+  dt_min           = 1.0e-3
+  dt_recompute_tol = 1.5e-1
+  turbulent   = .true.
+  eps         = 0.10
+  pseed       = 12345
+  kcut        = 8
+  stats_every = 0                   ! stats off (not needed for the restart test)
+  stats_start = 0
+  stats_file  = 'unused_stats.dat'
+  div_every   = 0
+  time_every  = 0
+  nan_every   = 20
+  validate_steps = 200
+/

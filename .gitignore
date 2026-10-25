@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+# build products
+/build/
+/build_par/
+/build_vifsetup/
+*.o
+*.mod
+# run products
+*.out
+*.nsys-rep
+chk_*.bin
+chk_*.bin.tmp
+snap_*.bin
+stats_*.dat
+*.latest
+latest_*.txt

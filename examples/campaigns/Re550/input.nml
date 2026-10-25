@@ -1,0 +1,56 @@
+! campaigns/Re550/input.nml -- Re_tau ~ 550 BIG box (8pi x 2 x 3pi), 1536x161x1152.
+! Ready-to-run: sized for 1 node / 4 GPUs (~40 GB/GPU peak MODEL -- fits
+! easily; all-NVLink comm, no IB; restart_auto chains jobs).
+! Submit from THIS directory:  cp <repo>/build_par/Veta_sp . && sbatch veta.sbatch
+! Time controls (t_end / *_start / *_dt) are TUNABLE to your transient.
+&run
+  n          = 160
+  nx         = 1536
+  nz         = 1152
+  Lx         = 25.132741228718345    ! 8*pi
+  Lz         = 9.42477796076938      ! 3*pi
+  Re         = 10000.0
+  Qtar       = 1.0
+  dt         = 2.5e-3                ! initial guess only; adapted from step 1
+  n_steps    = 2000000               ! backstop cap (t_end is the real terminator)
+  ! --- performance (measured) ---------------------------------------------------
+  a2a_overlap = 1                    ! per-field pipelined A2A (1.38x at 8 nodes)
+  u_galilean  = 0.6                  ! advect in a moving frame -> larger CFL-limited dt
+  ! --- variable dt --------------------------------------------------------------
+  variable_dt      = .true.
+  t_end            = 2000.0
+  cfl_target       = 0.40            ! ceiling sqrt(3)/pi = 0.5513
+  dt_max           = 6.0e-3
+  dt_min           = 1.0e-4
+  dt_recompute_tol = 0.15
+  dt_check_every   = 20
+  max_wall_hours   = 23.5            ! clean checkpoint+stats exit before the Slurm kill
+  wall_margin_min  = 5               ! small files here; 5 min slack is plenty
+  ! --- time-based output (convective units; TUNE to your transient) ------------
+  snap_start    = 400.0
+  snap_dt       = 10.0
+  stats_start_t = 400.0
+  stats_dt      = 0.5
+  chk_dt        = 50.0
+  ! --- diagnostics ---------------------------------------------------------------
+  log_every  = 250
+  div_every  = 5000
+  time_every = 0                     ! >0 adds a per-step device sync -- benchmarking only
+  nan_every  = 10
+  hsym_every = 5000                  ! kx=0 Hermitian-leak watchdog (rank-local, cheap)
+  ! --- I/O + IC -------------------------------------------------------------------
+  do_restart   = .false.            ! strict restart (missing checkpoint = FATAL)
+  restart_auto = .true.             ! [12.1] resubmit-safe: continue from the newest
+                                    ! checkpoint if one exists, else fresh IC -- the
+                                    ! same deck serves first submit AND resubmits
+  restart_file = 'chk_Re550.bin'     ! restart: do_restart=.true. (or point at chk_Re550.bin.latest's target)
+  chk_file     = 'chk_Re550.bin'
+  turbulent  = .true.
+  eps        = 0.10
+  pseed      = 20551
+  kcut       = 8
+  stats_file = 'stats_Re550.dat'
+  snap_pressure = .true.
+  snap_fp32     = .true.
+  snap_file     = 'snap_Re550.bin'
+/

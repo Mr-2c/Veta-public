@@ -1,0 +1,69 @@
+! campaigns/Re2000/input.nml -- Re_tau ~ 2000 BIG box (8pi x 2 x 3pi), 5120x481x4096.
+! Box 4pi x 1.5pi at
+! the resolution dx+ = 9.8, dz+ = 4.6. Honest box
+! note: 4pi x 1.5pi confines the Re_tau~2000 outer superstructures vs 8pi x
+! 3pi -- fine for the FD-vs-Cheb OVERLAY (twins share the box, so box
+! effects cancel) and for one-point statistics; not the box for spectra
+! papers. Sized for 5 nodes / 20 GPUs:
+! [MODEL] persistent ~60 GB/GPU, peak ~66 of 95.8. A 4-node run fits
+! but tight (~81 GB peak); verify banner + nvidia-smi on the first run.
+!
+! DISK: one checkpoint ~40 GB dp / ~20 GB with chk_fp32 (rolling last-2 kept),
+! one 4-field fp32 snapshot ~40 GB each. RUN FROM NVME/SCRATCH, not from a
+! quota-limited home directory.
+! Submit from THIS directory:  cp <repo>/build_par/Veta_sp . && sbatch veta.sbatch
+! Time controls (t_end / *_start / *_dt) are TUNABLE to your transient.
+&run
+  n          = 480
+  nx         = 2560
+  nz         = 2048
+  Lx         = 12.566370614359172    ! 4*pi
+  Lz         = 4.71238898038469      ! 1.5*pi
+  Re         = 43500.0               ! Re_bulk (h-based; Re_tau ~ 2000)
+  Qtar       = 1.0
+  dt         = 8.0e-4                ! initial guess only; adapted from step 1
+  n_steps    = 4000000               ! backstop cap (t_end is the real terminator)
+  ! --- performance (measured) ---------------------------------------------------
+  a2a_overlap = 1                    ! per-field pipelined A2A (1.38x at 8 nodes)
+  u_galilean  = 0.6                  ! advect in a moving frame -> larger CFL-limited dt
+  io_hints    = 'romio_cb_write=enable,cb_nodes=5'  ! measured: 161-GB writes off the slow path
+  ! snap_evict = .true.              ! ONLY for 16-node runs (reclaims ~1.26 GB/GPU)
+  ! --- variable dt --------------------------------------------------------------
+  variable_dt      = .true.
+  t_end            = 1000.0
+  cfl_target       = 0.40
+  dt_max           = 2.5e-3
+  dt_min           = 2.0e-5
+  dt_recompute_tol = 0.15
+  dt_check_every   = 20
+  max_wall_hours   = 23.5
+  wall_margin_min  = 15              ! reserve for the final ~161 GB checkpoint write
+  ! --- time-based output (convective units; TUNE to your transient) ------------
+  snap_start    = 400.0
+  snap_dt       = 25.0
+  stats_start_t = 400.0
+  stats_dt      = 0.5
+  chk_dt        = 25.0
+  ! --- diagnostics ---------------------------------------------------------------
+  log_every  = 250
+  div_every  = 5000
+  time_every = 0                     ! >0 adds a per-step device sync -- benchmarking only
+  nan_every  = 10
+  hsym_every = 5000
+  ! --- I/O + IC -------------------------------------------------------------------
+  do_restart   = .false.            ! strict restart (missing checkpoint = FATAL)
+  restart_auto = .true.             ! [12.1] resubmit-safe: continue from the newest
+                                    ! checkpoint if one exists, else fresh IC -- the
+                                    ! same deck serves first submit AND resubmits
+  restart_file = 'chk_Re2000.bin'
+  chk_file     = 'chk_Re2000.bin'
+  chk_fp32     = .true.              ! 81 GB checkpoints; restart-continuity at fp32 (fine for stats runs)
+  turbulent  = .true.
+  eps        = 0.10
+  pseed      = 42000
+  kcut       = 8
+  stats_file = 'stats_Re2000.dat'
+  snap_pressure = .true.
+  snap_fp32     = .true.
+  snap_file     = 'snap_Re2000.bin'
+/

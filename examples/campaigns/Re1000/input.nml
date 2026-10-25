@@ -1,0 +1,56 @@
+! campaigns/Re1000/input.nml -- Re_tau ~ 1000 minimal box (2pi x 2 x pi), 576x241x480.
+! Ready-to-run: fits 1 node / 4 GPUs (~10 GB/GPU at TP=sp).
+! NOTE: box ASSUMED 2pi x 2 x pi (standard minimal channel) -- confirm Lx/Lz against
+! the campaign spec you are matching before the long run.
+! Submit from THIS directory:  cp <repo>/build_par/Veta_sp . && sbatch veta.sbatch
+&run
+  n          = 240
+  nx         = 576
+  nz         = 480
+  Lx         = 6.283185307179586     ! 2*pi  (ASSUMED -- confirm)
+  Lz         = 3.141592653589793     ! pi    (ASSUMED -- confirm)
+  Re         = 20000.0
+  Qtar       = 1.0
+  dt         = 1.6e-3                ! initial guess only; adapted from step 1
+  n_steps    = 4000000               ! backstop cap (t_end is the real terminator)
+  ! --- performance (measured) ---------------------------------------------------
+  a2a_overlap = 1                    ! per-field pipelined A2A (1.38x at 8 nodes)
+  u_galilean  = 0.6                  ! advect in a moving frame -> larger CFL-limited dt
+  ! --- variable dt --------------------------------------------------------------
+  variable_dt      = .true.
+  t_end            = 3000.0
+  cfl_target       = 0.40
+  dt_max           = 4.0e-3
+  dt_min           = 5.0e-5
+  dt_recompute_tol = 0.15
+  dt_check_every   = 20
+  max_wall_hours   = 23.5
+  wall_margin_min  = 5
+  ! --- time-based output (convective units; TUNE to your transient) ------------
+  snap_start    = 400.0
+  snap_dt       = 5.0
+  stats_start_t = 400.0
+  stats_dt      = 0.5
+  chk_dt        = 50.0
+  ! --- diagnostics ---------------------------------------------------------------
+  log_every  = 250
+  div_every  = 5000
+  time_every = 0                     ! >0 adds a per-step device sync -- benchmarking only
+  nan_every  = 10
+  hsym_every = 5000
+  ! --- I/O + IC -------------------------------------------------------------------
+  do_restart   = .false.            ! strict restart (missing checkpoint = FATAL)
+  restart_auto = .true.             ! [12.1] resubmit-safe: continue from the newest
+                                    ! checkpoint if one exists, else fresh IC -- the
+                                    ! same deck serves first submit AND resubmits
+  restart_file = 'chk_Re1000.bin'
+  chk_file     = 'chk_Re1000.bin'
+  turbulent  = .true.
+  eps        = 0.10
+  pseed      = 41000
+  kcut       = 8
+  stats_file = 'stats_Re1000.dat'
+  snap_pressure = .true.
+  snap_fp32     = .true.
+  snap_file     = 'snap_Re1000.bin'
+/

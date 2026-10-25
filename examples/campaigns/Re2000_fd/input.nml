@@ -1,0 +1,80 @@
+! campaigns/Re2000_fd/input.nml -- Re_tau ~ 2000, FD-y TWIN of ../Re2000.
+! Same box/Re/nx/nz as the Chebyshev case; y = 8th-order banded FD on the
+! natural grid ygrid_Re2000_natural471.dat (P&O alpha-corrected, alpha=0.40,
+! c=0.72: dy+_wall = 0.45 vs cheb-GLC 0.043, dy+_CL = 13.1 = cheb's, ny = 471
+! vs cheb 481 -- FEWER points, spent where the physics is). Run BOTH twins and
+! compare stats -- the FD-vs-Cheb physics gate at production Re.
+! Box 4pi x 1.5pi
+! at this resolution, twin-matched to ../Re2000 (see its header for the
+! box-confinement note -- it cancels in the overlay). Sized for 5 nodes / 20
+! GPUs: [MODEL] persistent
+! ~52 GB/GPU, peak ~58 GB WITHOUT the helm cache, ~76 GB WITH it (cache is
+! ~17 GiB at this per-rank mode count). Do NOT drop to 4 nodes
+! with the cache on (~94 GB peak); verify banner + nvidia-smi on first run.
+! DISK: checkpoint ~41 GB dp / ~21 GB fp32; snapshot ~41 GB. NVME ONLY.
+! WEIGHTS: the ygrid file carries FD-scheme-matched 9-point interpolatory
+! weights (they cut trapezoid's ~1e-5 bulk-flux offset to machine precision;
+! the reader enforces w>0 and sum(w)=2).
+! Pressure stats/snapshots ENABLED (FD backend).
+! Submit from THIS directory:  cp <repo>/build_par/Veta_sp . && sbatch veta.sbatch
+&run
+  n          = 470
+  nx         = 2560
+  nz         = 2048
+  Lx         = 12.566370614359172    ! 4*pi
+  Lz         = 4.71238898038469      ! 1.5*pi
+  Re         = 43500.0               ! Re_bulk (h-based; Re_tau ~ 2000)
+  Qtar       = 1.0
+  dt         = 8.0e-4                ! initial guess only; adapted from step 1
+  n_steps    = 2000000               ! backstop cap (t_end is the real terminator)
+  ! --- FD-y backend --------------------------------------------------------------
+  ygrid_file  = 'ygrid_Re2000_natural471.dat'
+  fd_kl       = 4                    ! 9-point stencils (8th-order interior)
+  fd_cache_gb = 18.0                 ! the ~17 GiB cache fits with ~2x margin (peak ~76 of
+                                     ! 95.8 GB, [MODEL]) -> 2.6x cached solve path at the flagship.
+                                     ! Set 0.0 to run uncached. Verify the
+                                     ! '[fd] helm factor cache ON' banner + free memory on the
+                                     ! first smoke run before the long job.
+  ! --- performance (measured) ---------------------------------------------------
+  a2a_overlap = 1                    ! per-field pipelined A2A (1.38x at 8 nodes)
+  u_galilean  = 0.6                  ! advect in a moving frame -> larger CFL-limited dt
+  io_hints    = 'romio_cb_write=enable,cb_nodes=5'  ! measured: big writes off the slow path
+  ! --- variable dt --------------------------------------------------------------
+  variable_dt      = .true.
+  t_end            = 1000.0
+  cfl_target       = 0.40
+  dt_max           = 2.5e-3
+  dt_min           = 2.0e-5
+  dt_recompute_tol = 0.15
+  dt_check_every   = 20
+  max_wall_hours   = 23.5
+  wall_margin_min  = 15              ! reserve for the final big checkpoint write
+  ! --- time-based output (convective units; TUNE to your transient) ------------
+  snap_start    = 400.0
+  snap_dt       = 25.0
+  stats_start_t = 400.0
+  stats_dt      = 0.5
+  chk_dt        = 25.0
+  ! --- diagnostics ---------------------------------------------------------------
+  log_every  = 250
+  div_every  = 5000
+  time_every = 0                     ! >0 adds a per-step device sync -- benchmarking only
+  nan_every  = 10
+  hsym_every = 5000
+  ! --- I/O + IC -------------------------------------------------------------------
+  do_restart   = .false.            ! strict restart (missing checkpoint = FATAL)
+  restart_auto = .true.             ! [12.1] resubmit-safe: continue from the newest
+                                    ! checkpoint if one exists, else fresh IC -- the
+                                    ! same deck serves first submit AND resubmits
+  restart_file = 'chk_Re2000_fd.bin'
+  chk_fp32     = .true.              ! ~83 GB checkpoints (reader promotes on restart)
+  chk_file     = 'chk_Re2000_fd.bin'
+  turbulent  = .true.
+  eps        = 0.10
+  pseed      = 42000
+  kcut       = 8
+  stats_file = 'stats_Re2000_fd.dat'
+  snap_pressure = .true.             ! FD pressure backend (<p>,<p'^2> + p snapshots)
+  snap_fp32     = .true.
+  snap_file     = 'snap_Re2000_fd.bin'
+/

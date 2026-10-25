@@ -1,0 +1,46 @@
+! input_snap_demo.nml -- demo of physical u,v,w snapshots.
+!
+! Small 64^3 turbulent run. Snapshots every 50 steps, but only AFTER t >= snap_start
+! (skips the transient): with dt=5e-3, t=0.5 is step 100, so the step-50 snapshot
+! (t=0.25) is SKIPPED and snapshots are written at steps 100, 150, 200 ->
+!   snap_dp_step00000100_t0.500.bin, ..._step00000150_t0.750.bin, ..._step00000200_t1.000.bin
+! (numbered, keep-all; latest_snapshot.txt points to the newest). fp32 by default.
+! Read any of them with:  python3 tools/read_snapshot.py <file>
+&run
+  n          = 64
+  nx         = 64
+  nz         = 64
+  Lx         = 12.566370614359172   ! 4*pi
+  Lz         = 4.188790204786391    ! 4*pi/3
+  Re         = 2800.0
+  Qtar       = 1.0
+  dt         = 5.0e-3
+  n_steps    = 200
+  log_every  = 50
+  chk_every  = 0                    ! checkpoints off for this demo
+  do_restart = .false.
+  restart_file = 'unused.bin'
+  chk_file     = 'chk.bin'
+  variable_dt      = .false.
+  cfl_target       = 0.32
+  dt_max           = 1.0e-2
+  dt_min           = 1.0e-3
+  dt_recompute_tol = 1.5e-1
+  turbulent   = .true.
+  eps         = 0.10
+  pseed       = 12345
+  kcut        = 8
+  stats_every = 0
+  stats_start = 0
+  stats_file  = 'unused_stats.dat'
+  div_every   = 0
+  time_every  = 0
+  nan_every   = 20
+  validate_steps = 200
+  ! --- physical u,v,w(,p) snapshots ---
+  snap_every    = 50                ! cadence (steps)
+  snap_start    = 0.5               ! NS-time threshold: skip t < 0.5 (the "transient")
+  snap_fp32     = .true.            ! fp32 output (set .false. for fp64)
+  snap_file     = 'snap.bin'
+  snap_pressure = .true.            ! also solve+write the diagnostic pressure p (4th field)
+/

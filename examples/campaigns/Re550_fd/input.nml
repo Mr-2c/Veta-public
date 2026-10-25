@@ -1,0 +1,65 @@
+! campaigns/Re550_fd/input.nml -- Re_tau ~ 550 BIG box, FD-y TWIN of ../Re550.
+! Same box/Re/nx/nz as the Chebyshev case; y = 8th-order banded FD on the
+! natural grid ygrid_Re550_natural179.dat (P&O alpha-corrected, alpha=0.40,
+! c=0.85: dy+_wall = 0.50, dy+_CL = 9.8, ny = 179 vs cheb 161). Run BOTH twins and
+! compare stats -- the FD-vs-Cheb physics gate at production Re.
+! Sized for 1 node / 4 GPUs (~39 GB/GPU + cache, MODEL).
+! Pressure stats/snapshots ENABLED (FD backend).
+! Submit from THIS directory:  cp <repo>/build_par/Veta_sp . && sbatch veta.sbatch
+&run
+  n          = 178
+  nx         = 1536
+  nz         = 1152
+  Lx         = 25.132741228718345    ! 8*pi
+  Lz         = 9.42477796076938      ! 3*pi
+  Re         = 10000.0
+  Qtar       = 1.0
+  dt         = 2.5e-3                ! initial guess only; adapted from step 1
+  n_steps    = 2000000               ! backstop cap (t_end is the real terminator)
+  ! --- FD-y backend --------------------------------------------------------------
+  ygrid_file  = 'ygrid_Re550_natural179.dat'
+  fd_kl       = 4                    ! 9-point stencils (8th-order interior)
+  fd_cache_gb = 12.0                 ! helm factor cache: ~10.8 GiB at 1 node / 4 GPUs
+                                     ! (scales as modes/rank) -- a cap below that
+                                     ! silently runs the ~2.6x slower uncached path
+  ! --- performance (measured) ---------------------------------------------------
+  a2a_overlap = 1                    ! per-field pipelined A2A (1.38x at 8 nodes)
+  u_galilean  = 0.6                  ! advect in a moving frame -> larger CFL-limited dt
+  ! --- variable dt --------------------------------------------------------------
+  variable_dt      = .true.
+  t_end            = 2000.0
+  cfl_target       = 0.40
+  dt_max           = 6.0e-3
+  dt_min           = 1.0e-4
+  dt_recompute_tol = 0.15
+  dt_check_every   = 20
+  max_wall_hours   = 23.5
+  wall_margin_min  = 5
+  ! --- time-based output (convective units; TUNE to your transient) ------------
+  snap_start    = 400.0
+  snap_dt       = 10.0
+  stats_start_t = 400.0
+  stats_dt      = 0.5
+  chk_dt        = 50.0
+  ! --- diagnostics ---------------------------------------------------------------
+  log_every  = 250
+  div_every  = 5000
+  time_every = 0                     ! >0 adds a per-step device sync -- benchmarking only
+  nan_every  = 10
+  hsym_every = 5000
+  ! --- I/O + IC -------------------------------------------------------------------
+  do_restart   = .false.            ! strict restart (missing checkpoint = FATAL)
+  restart_auto = .true.             ! [12.1] resubmit-safe: continue from the newest
+                                    ! checkpoint if one exists, else fresh IC -- the
+                                    ! same deck serves first submit AND resubmits
+  restart_file = 'chk_Re550_fd.bin'
+  chk_file     = 'chk_Re550_fd.bin'
+  turbulent  = .true.
+  eps        = 0.10
+  pseed      = 20551
+  kcut       = 8
+  stats_file = 'stats_Re550_fd.dat'
+  snap_pressure = .true.             ! FD pressure backend (<p>,<p'^2> + p snapshots)
+  snap_fp32     = .true.
+  snap_file     = 'snap_Re550_fd.bin'
+/

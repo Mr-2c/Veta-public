@@ -1,0 +1,27 @@
+! Laminar Poiseuille validation -- FIXED dt -- stats/io disabled.
+! From rest, CFR builds u0(y) toward the parabola; expect the final
+!   [PASS] laminar Poiseuille recovered  with max|u0 - analytic| ~ 1e-15.
+! Small grid, Re=10: viscous relaxation time ~ Re, so a few thousand steps suffice.
+! LOG READING (avoid the coeff-vs-centreline trap): the 'u0(0)' column is the
+! PHYSICAL CENTRELINE velocity u_0(y=0) = sum_k a_k T_k(0), which for Qtar=1 is
+! u_c = 1.5*Qtar = 1.5 (NOT the Chebyshev coefficient a_0 = 3Q/4 = 0.75). The
+! 'U_bulk' column is the HEIGHT-AVERAGED bulk velocity U_b = (1/H) int u dy (H=2),
+! which converges to Qtar = 1.0. So at convergence: U_bulk -> 1.0, u0(0) -> 1.5.
+&run
+  n            = 32          ! Chebyshev degree (33 coeffs)
+  nx           = 16          ! physical x points  (nkx = 9)
+  nz           = 16          ! physical z points
+  Lx           = 12.566370614359172  ! 4*pi
+  Lz           = 6.283185307179586   ! 2*pi
+  Re           = 10.0        ! bulk-based Reynolds number
+  Qtar         = 1.0         ! target bulk velocity U_b (u_c = 1.5)
+  dt           = 5.0e-3      ! FIXED time step
+  n_steps      = 6000        ! ~30 viscous-ish; relaxes the parabola to ~1e-15
+  log_every    = 500
+  chk_every    = 1000000     ! (io disabled; large value = never)
+  variable_dt  = .false.
+  turbulent    = .false.
+  div_every    = 0           ! set e.g. 1000 to print max|div u| (should be ~1e-18)
+  nan_every    = 100         ! watchdog cadence
+  time_every   = 0
+/

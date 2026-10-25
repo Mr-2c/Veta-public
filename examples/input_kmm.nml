@@ -1,0 +1,85 @@
+! input_kmm.nml -- the HEADLINE VALIDATION: Kim-Moin-Moser box at Re_tau ~ 180,
+! statistics vs Moser-Kim-Mansour (1999). Copy to ./input.nml.
+!
+! Case: 4*pi x 2 x 4*pi/3 box (the MKM/KMM box), 128 x 129 x 128, Re = 2800
+! (bulk, CFR at U_b = 1). MKM's Re_tau = 178.12; expect 178 +/- 3 here.
+!
+! RESOLUTION at Re_tau = 178 (matches MKM's 128x129x128 dealiased spectral):
+!   dx+ = Lx/nx * Re_tau = 17.5      (MKM: 17.7)
+!   dz+ = Lz/nz * Re_tau =  5.8      (MKM:  5.9)
+!   dy+ = 0.054 (wall) ... 4.4 (centre)   [GLC]
+!   dt+ = dt * Re_tau^2 / Re = 0.057      (well below ~0.2 guidance)
+!
+! TIME STEP, fixed (variable dt is NOT recommended at this size -- each retune
+! costs ~8x the 64^3 rebuild, i.e. seconds):
+!   conventional fmax ~ 25-30 ->
+!   printed CFL ~ 0.13-0.15 equilibrium, <= ~0.22 through transition,
+!   ceiling sqrt(3)/pi = 0.5513: a ~3.7x margin. ALARM: CFL > 0.40 -> stop,
+!   restart last checkpoint at dt = 3e-3.
+!
+! DURATION: fresh spin-up (a checkpoint from a different box/grid is refused by
+! io_mod -- correctly). Transition + settling by
+! t ~ 100-150 (bigger box, longer large-scale equilibration than 2pi x pi);
+! stats from t = 150 to t = 650: T_avg = 500
+! (peak uncertainty < 1%, stress residual ~ 0.5%).
+!
+! COST (R2C, measured on one H100): ~17.7 ms/step at this 128^3 grid -> the full
+! 130k-step run is ~40 min (step_full ~99% of wall; stats ~0.5%, io ~0%).
+!
+! WATCH: [init] q_rms line; Re_tau 91.7 -> dip -> climb to the 170-185 band
+! by t ~ 60-100; max|div u| ~ 1e-17 ALL RUN (the R2C divergence probe);
+! U_bulk = 1.000000; watchdog silent. [R2C note: there is no max|Im u| column
+! any more -- the physical field is real, so the C2C realness probe is moot.]
+! The stats header self-reports the stress-linearity residual (expect ~0.5%)
+! and the uu-peak wall asymmetry (expect ~1-2%) -- no post-processing needed to
+! judge the run.
+!
+! EXTEND (if more averaging is wanted): set do_restart = .true.,
+! restart_file = 'chk_kmm.bin', and raise n_steps; stats_start then counts
+! from the restart step as before.
+!
+! COMPARE: MKM (1999) chan180 profiles (U+, uu+, vv+, ww+, uv+) from the
+! Moser database; analyze_stats.py can overlay them.
+&run
+  n          = 128
+  nx         = 128
+  nz         = 128
+  Lx         = 12.566370614359172   ! 4*pi
+  Lz         = 4.188790204786391    ! 4*pi/3
+  Re         = 2800.0
+  Qtar       = 1.0
+  dt         = 5.0e-3               ! FIXED; printed CFL ~0.14, ceiling 0.5513
+  n_steps    = 130000               ! t = 650
+  log_every  = 100                  ! every 0.5 t.u.
+  chk_every  = 10000                ! every 50 t.u. (13 checkpoints)
+  do_restart = .false.
+  restart_file = 'restart.bin'
+  chk_file     = 'chk_kmm.bin'
+  variable_dt      = .false.
+  cfl_target       = 0.32           ! inert here (fixed dt); conventional units
+  dt_max           = 1.0e-2
+  dt_min           = 1.0e-3
+  dt_recompute_tol = 1.5e-1
+  turbulent   = .true.
+  eps         = 0.10                ! 10% volume-rms intensity
+  pseed       = 12345
+  kcut        = 8
+  stats_every = 50                  ! sample every 0.25 t.u.
+  stats_start = 30000               ! = t 150
+  stats_file  = 'stats_kmm.dat'
+  div_every   = 500
+  time_every  = 1000
+  nan_every   = 10
+  ! --- diagnostic pressure -------------------------------------------------------
+  ! snap_pressure=.true. makes the turbulent stats also sample <p>(y), <p'^2>(y)
+  ! and report the drive force dp/dx (= CFR beta) -> stats_kmm.dat. snap_every=0
+  ! keeps field-dump I/O off for the validation run; set snap_every>0 (e.g. 2000)
+  ! to also write u,v,w,p snapshots.
+  snap_pressure = .true.
+  snap_every    = 0
+  snap_start    = 0.0
+  snap_fp32     = .true.
+  snap_file     = 'snap_kmm.bin'
+  validate_steps = 200              ! --validate ONLY (ignored in production): dist-vs-single-GPU
+                                    ! horizon.
+/

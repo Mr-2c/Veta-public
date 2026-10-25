@@ -1,0 +1,64 @@
+name: CI
+
+# CLAUSON is CUDA-Fortran + MPI + NCCL and needs nvfortran (nvhpc) and NVIDIA
+# GPUs to build and run -- neither is available on GitHub-hosted runners. So CI
+# runs the project's STATIC gates (pure Python, no GPU/compiler) plus
+# shell-script syntax checks. The full GPU build + bit-exact test suite
+# (run_all_tests.sh, main_par --validate) runs on the cluster; see README.md.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  static-gates:
+    name: Static gates (structural / CUF-0155 / case-fold)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Collect Fortran sources
+        id: src
+        # Tree layout: shared modules in src/core, the serial program in
+        # src/serial, the multi-GPU driver in src/parallel, tests in tests/{serial,parallel}.
+        # gate23 (device/host) runs on the solver source only (no tests);
+        # gate1/gate2 run on source + tests.
+        run: |
+          ALL=$(git ls-files '*.F90')
+          echo "F90=$(echo "$ALL" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          echo "SP=$(echo "$ALL" | grep -v '^tests/' | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
+      # Gate 1: every module/subroutine/function/do/if/type opens and closes
+      # (the imbalance class that silently breaks Fortran). HARD.
+      - name: "Gate 1 - structural balance (hard)"
+        run: python3 tools/gate_general.py ${{ steps.src.outputs.F90 }}
+
+      # Gate 3: the nvfortran traps -- a CUF kernel dereferencing a derived-type
+      # device member (NVFORTRAN-S-0155) and assumed/deferred-shape device dummies.
+      # HARD (clean across src + parallel).
+      - name: "Gate 3 - device/host + CUF-0155 audit (hard)"
+        run: python3 tools/gate23.py ${{ steps.src.outputs.SP }}
+
+      # Gate 2: case-fold collisions (Fortran is case-insensitive). ADVISORY --
+      # its own docstring says a hit is a review prompt, not an automatic reject.
+      - name: "Gate 2 - case-fold collisions (advisory)"
+        continue-on-error: true
+        run: python3 tools/gate2_clean.py ${{ steps.src.outputs.F90 }}
+
+  shell-syntax:
+    name: Shell scripts (bash -n)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "bash -n on every *.sh and *.sbatch"
+        run: |
+          rc=0
+          for f in $(git ls-files '*.sh' '*.sbatch'); do
+            echo "bash -n $f"
+            bash -n "$f" || { echo "  ^ SYNTAX ERROR"; rc=1; }
+          done
+          exit $rc
