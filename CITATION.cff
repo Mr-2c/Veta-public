@@ -44,10 +44,10 @@ preferred-citation:
       given-names: Philipp
   year: 2026
   journal: "SSRN preprint"
-  # identifiers:
-  #   - type: other
-  #     value: "arXiv:2609.XXXXX"
-  #     description: "arXiv identifier"
-  #   - type: doi
-  #     value: "10.48550/arXiv.2609.XXXXX"
+  identifiers:
+    - type: other
+      value: "10.2139/ssrn.7477290"
+      description: "SSRN identifier"
+    - type: url
+      value: "https://ssrn.com/abstract=7477290"
   notes: "Preprint; replace with the journal reference once published."
